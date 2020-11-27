@@ -12,6 +12,7 @@ module.exports = class WhereBuilder {
     { Type: Object, method: 'genObject' },
   ];
 
+  // 'whereKeyAndRequestKey'
   genString(str) {
     if (this.request[str]) {
       this.where[str] = this.request[str];
@@ -22,11 +23,12 @@ module.exports = class WhereBuilder {
 
   genArray(arr) {
     if (arr.length == 2) {
+      // ['whereKey', 'requestKey']
       if (typeof arr[1] === 'string') {
-        const [whereKey, queryKey] = arr;
+        const [whereKey, requestKey] = arr;
 
-        if (this.request[queryKey]) {
-          this.where[whereKey] = this.request[queryKey];
+        if (this.request[requestKey]) {
+          this.where[whereKey] = this.request[requestKey];
         } else {
           console.log('Key not found in request');
         }
@@ -34,14 +36,21 @@ module.exports = class WhereBuilder {
         return;
       }
 
+      // ['whereKeyAndRequestKey', {}]
       if (arr[1].__proto__ === Object.prototype) {
-        const [whereKey, obj] = arr;
+        const [whereKeyAndRequestKey, obj] = arr;
 
-        this.where[whereKey] = obj;
+        const whereKey = whereKeyAndRequestKey;
+        const requestKey = whereKeyAndRequestKey;
+
+        if (this.request[requestKey]) {
+          this.where[whereKey] = obj;
+        }
 
         return;
       }
 
+      // ['whereKey', () => 'value']
       if (typeof arr[1] === 'function') {
         const [whereKey, cb] = arr;
 
@@ -60,10 +69,11 @@ module.exports = class WhereBuilder {
     }
 
     if (arr.length == 3) {
+      // ['whereKey', 'requestKey', {}]
       if (typeof arr[0] === 'string' && arr[2].__proto__ === Object.prototype) {
-        const [whereKey, queryKey, obj] = arr;
+        const [whereKey, requestKey, obj] = arr;
 
-        if (this.request[queryKey]) {
+        if (this.request[requestKey]) {
           this.where[whereKey] = obj;
 
           return;
@@ -72,10 +82,11 @@ module.exports = class WhereBuilder {
         return;
       }
 
+      // [null, 'requestKey', {}]
       if (arr[0] === null && arr[2].__proto__ === Object.prototype) {
-        const [, queryKey, obj] = arr;
+        const [, requestKey, obj] = arr;
 
-        if (this.request[queryKey]) {
+        if (this.request[requestKey]) {
           this.where = { ...this.where, ...obj };
 
           return;
@@ -93,12 +104,14 @@ module.exports = class WhereBuilder {
   }
 
   get() {
-    for (const el of this.raw) {
-      for (const gen of this.gens) {
-        if (el.__proto__ === gen.Type.prototype) {
-          this[gen.method](el);
+    if (this.raw.length) {
+      for (const el of this.raw) {
+        for (const gen of this.gens) {
+          if (el.__proto__ === gen.Type.prototype) {
+            this[gen.method](el);
 
-          break;
+            break;
+          }
         }
       }
     }
