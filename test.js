@@ -5,7 +5,7 @@ const request = {
 };
 const raw = ['lastname'];
 
-const where = new WhereBuilder(request, raw).parse();
+const where = new WhereBuilder(request, raw).get();
 
 console.log(where.__proto__ === Object.prototype);
 console.log(where);

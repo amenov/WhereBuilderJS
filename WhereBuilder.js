@@ -92,7 +92,7 @@ module.exports = class WhereBuilder {
     this.where = { ...this.where, ...obj };
   }
 
-  parse() {
+  get() {
     for (const el of this.raw) {
       for (const gen of this.gens) {
         if (el.__proto__ === gen.Type.prototype) {
