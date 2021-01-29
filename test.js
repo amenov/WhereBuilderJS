@@ -1,25 +1,29 @@
 const WhereBuilder = require('./WhereBuilder');
 
-const request = {
+const query = {
   firstname: 'Abdulsalam',
-  lastname: 'Amenov',
+  name: 'Abdulsalam',
+  just: 'simple',
 };
-// const raw = ['lastname'];
-const raw = [['name', 'firstname', { a: 1 }]];
+const abstractions = [
+  'firstname',
+  ['name', 'firstname'],
+  ['func', () => true],
+  ['just', { just: query.just }],
+  ['object', 'name', { test: true }],
+  [null, 'name', { test: true }],
+  ['object_func', 'name', () => ({ object_func: true })],
+  [null, 'name', () => ({ null_func: true })],
+];
 
-const where = new WhereBuilder(request, raw).get();
+whereBuilder = new WhereBuilder(query, abstractions);
 
-console.log(where.__proto__ === Object.prototype);
-console.log(where);
+try {
+  whereBuilder.run();
 
-/*
-[
-  {},
-  'whereKeyAndRequestKey',
-  ['whereKey', 'requestKey'],
-  ['whereKeyAndRequestKey', {}],
-  ['whereKey', () => 'value'],
-  ['whereKey', 'requestKey', {}],
-  [null, 'requestKey', {}]
-]
-*/
+  const where = whereBuilder.where;
+
+  console.log(where);
+} catch (err) {
+  console.log(err);
+}

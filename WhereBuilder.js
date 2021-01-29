@@ -1,65 +1,76 @@
 module.exports = class WhereBuilder {
-  constructor(request, raw) {
-    this.request = request;
-    this.raw = raw;
+  constructor(query, abstractions) {
+    this.query = query;
+    this.abstractions = abstractions;
   }
 
   where = {};
 
-  gens = [
-    { Type: String, method: 'genString' },
-    { Type: Array, method: 'genArray' },
-    { Type: Object, method: 'genObject' },
+  methods = [
+    { Type: String, method: '__string' },
+    { Type: Array, method: '__array' },
+    { Type: Object, method: '__object' },
   ];
 
-  // 'whereKeyAndRequestKey'
-  genString(str) {
-    if (this.request[str]) {
-      this.where[str] = this.request[str];
-    } else {
-      console.log('Key not found in request');
+  __checkType(val, Type) {
+    return val.__proto__ === Type.prototype;
+  }
+
+  __getQueryData(key) {
+    const data = this.query[key];
+
+    if (data !== undefined) {
+      if (this.__checkType(data, String)) {
+        return data;
+      } else {
+        throw TypeError('Expected string');
+      }
     }
   }
 
-  genArray(arr) {
+  // 'whereKeyRequestKey'
+  __string(str) {
+    const data = this.__getQueryData(str);
+
+    if (data) {
+      this.where[str] = data;
+    }
+  }
+
+  __array(arr) {
     if (arr.length == 2) {
       // ['whereKey', 'requestKey']
-      if (typeof arr[1] === 'string') {
+      if (this.__checkType(arr[1], String)) {
         const [whereKey, requestKey] = arr;
 
-        if (this.request[requestKey]) {
-          this.where[whereKey] = this.request[requestKey];
-        } else {
-          console.log('Key not found in request');
+        const data = this.__getQueryData(requestKey);
+
+        if (data) {
+          this.where[whereKey] = data;
         }
 
         return;
       }
 
-      // ['whereKeyAndRequestKey', {}]
-      if (arr[1].__proto__ === Object.prototype) {
-        const [whereKeyAndRequestKey, obj] = arr;
+      // ['whereKeyRequestKey', Object]
+      if (this.__checkType(arr[1], Object)) {
+        const [whereKeyRequestKey, obj] = arr;
 
-        const whereKey = whereKeyAndRequestKey;
-        const requestKey = whereKeyAndRequestKey;
-
-        if (this.request[requestKey]) {
-          this.where[whereKey] = obj;
+        if (this.__getQueryData(whereKeyRequestKey)) {
+          this.where[whereKeyRequestKey] = obj;
         }
 
         return;
       }
 
-      // ['whereKey', () => 'value']
-      if (typeof arr[1] === 'function') {
+      // ['whereKey', Function]
+      if (this.__checkType(arr[1], Function)) {
         const [whereKey, cb] = arr;
 
         const result = cb();
 
         if (result !== undefined && result !== '') {
           this.where[whereKey] = result;
-        } else {
-          console.log('Invalid value');
         }
 
         return;
@@ -69,53 +80,59 @@ module.exports = class WhereBuilder {
     }
 
     if (arr.length == 3) {
-      // ['whereKey', 'requestKey', {}]
-      if (typeof arr[0] === 'string' && arr[2].__proto__ === Object.prototype) {
+      // ['whereKey' || null, 'requestKey', Object]
+      if (this.__checkType(arr[2], Object)) {
         const [whereKey, requestKey, obj] = arr;
 
-        if (this.request[requestKey]) {
-          this.where[whereKey] = obj;
-
-          return;
+        if (this.__getQueryData(requestKey)) {
+          if (whereKey !== null) {
+            this.where[whereKey] = obj;
+          } else {
+            this.where = { ...this.where, ...obj };
+          }
         }
 
         return;
       }
 
-      // [null, 'requestKey', {}]
-      if (arr[0] === null && arr[2].__proto__ === Object.prototype) {
-        const [, requestKey, obj] = arr;
+      // ['whereKey' || null, 'requestKey', Function]
+      if (this.__checkType(arr[2], Function)) {
+        const [whereKey, requestKey, cb] = arr;
 
-        if (this.request[requestKey]) {
-          this.where = { ...this.where, ...obj };
+        const result = cb();
 
-          return;
+        if (
+          this.__getQueryData(requestKey) &&
+          result !== undefined &&
+          result !== ''
+        ) {
+          if (whereKey !== null) {
+            this.where[whereKey] = result;
+          } else {
+            this.where = { ...this.where, ...result };
+          }
         }
 
         return;
       }
-
-      return;
     }
   }
 
-  genObject(obj) {
+  __object(obj) {
     this.where = { ...this.where, ...obj };
   }
 
-  get() {
-    if (this.raw.length) {
-      for (const el of this.raw) {
-        for (const gen of this.gens) {
-          if (el.__proto__ === gen.Type.prototype) {
-            this[gen.method](el);
+  run() {
+    if (this.abstractions.length) {
+      for (const abstraction of this.abstractions) {
+        for (const { Type, method } of this.methods) {
+          if (this.__checkType(abstraction, Type)) {
+            this[method](abstraction);
 
             break;
           }
         }
       }
     }
-
-    return this.where;
   }
 };
