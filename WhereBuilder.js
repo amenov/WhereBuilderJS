@@ -12,15 +12,11 @@ module.exports = class WhereBuilder {
     { Type: Object, method: '__object' },
   ];
 
-  __checkType(val, Type) {
-    return val.__proto__ === Type.prototype;
-  }
-
   __getQueryData(key) {
     const data = this.query[key];
 
     if (data !== undefined) {
-      if (this.__checkType(data, String)) {
+      if (typeof data === 'string') {
         return data;
       } else {
         throw TypeError('Expected string');
@@ -40,7 +36,7 @@ module.exports = class WhereBuilder {
   __array(arr) {
     if (arr.length == 2) {
       // ['whereKey', 'requestKey']
-      if (this.__checkType(arr[1], String)) {
+      if (typeof arr[1] === 'string') {
         const [whereKey, requestKey] = arr;
 
         const data = this.__getQueryData(requestKey);
@@ -53,7 +49,7 @@ module.exports = class WhereBuilder {
       }
 
       // ['whereKeyRequestKey', Object]
-      if (this.__checkType(arr[1], Object)) {
+      if (arr[1].constructor === Object) {
         const [whereKeyRequestKey, obj] = arr;
 
         if (this.__getQueryData(whereKeyRequestKey)) {
@@ -64,7 +60,7 @@ module.exports = class WhereBuilder {
       }
 
       // ['whereKey', Function]
-      if (this.__checkType(arr[1], Function)) {
+      if (typeof arr[1] === 'function') {
         const [whereKey, cb] = arr;
 
         const result = cb();
@@ -81,7 +77,7 @@ module.exports = class WhereBuilder {
 
     if (arr.length == 3) {
       // ['whereKey' || null, 'requestKey', Object]
-      if (this.__checkType(arr[2], Object)) {
+      if (arr[2].constructor === Object) {
         const [whereKey, requestKey, obj] = arr;
 
         if (this.__getQueryData(requestKey)) {
@@ -96,7 +92,7 @@ module.exports = class WhereBuilder {
       }
 
       // ['whereKey' || null, 'requestKey', Function]
-      if (this.__checkType(arr[2], Function)) {
+      if (typeof arr[2] === 'function') {
         const [whereKey, requestKey, cb] = arr;
 
         const result = cb();
@@ -126,7 +122,7 @@ module.exports = class WhereBuilder {
     if (this.abstractions.length) {
       for (const abstraction of this.abstractions) {
         for (const { Type, method } of this.methods) {
-          if (this.__checkType(abstraction, Type)) {
+          if (abstraction.constructor === Type) {
             this[method](abstraction);
 
             break;
