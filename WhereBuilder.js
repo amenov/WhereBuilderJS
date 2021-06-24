@@ -1,134 +1,126 @@
 module.exports = class WhereBuilder {
+  #query
+  #abstractions
+
   constructor(query, abstractions) {
-    this.query = query;
-    this.abstractions = abstractions;
+    this.#query = query
+    this.#abstractions = abstractions
   }
 
-  where = {};
+  where = {}
 
-  methods = [
-    { Type: String, method: '__string' },
-    { Type: Array, method: '__array' },
-    { Type: Object, method: '__object' },
-  ];
+  #methods = [
+    {
+      Type: String,
+      method(str) {
+        // 'whereKeyQueryKey'
+        const data = this.#getQueryValue(str)
 
-  __getQueryData(key) {
-    const data = this.query[key];
-
-    if (data !== undefined) {
-      if (typeof data === 'string') {
-        return data;
-      } else {
-        throw TypeError('Expected string');
+        if (data) this.where[str] = data
       }
-    }
-  }
+    },
+    {
+      Type: Array,
+      method(arr) {
+        if (arr.length == 2) {
+          // ['whereKey', 'queryKey']
+          if (typeof arr[1] === 'string') {
+            const [whereKey, queryKey] = arr
 
-  // 'whereKeyRequestKey'
-  __string(str) {
-    const data = this.__getQueryData(str);
+            const data = this.#getQueryValue(queryKey)
 
-    if (data) {
-      this.where[str] = data;
-    }
-  }
+            if (data) this.where[whereKey] = data
 
-  __array(arr) {
-    if (arr.length == 2) {
-      // ['whereKey', 'requestKey']
-      if (typeof arr[1] === 'string') {
-        const [whereKey, requestKey] = arr;
+            return
+          }
 
-        const data = this.__getQueryData(requestKey);
+          // ['whereKeyQueryKey', Object]
+          if (arr[1].constructor === Object) {
+            const [whereKeyQueryKey, obj] = arr
 
-        if (data) {
-          this.where[whereKey] = data;
+            if (this.#getQueryValue(whereKeyQueryKey)) {
+              this.where[whereKeyQueryKey] = obj
+            }
+
+            return
+          }
+
+          // ['whereKey', Function]
+          if (typeof arr[1] === 'function') {
+            const [whereKey, func] = arr
+
+            const result = func()
+
+            if (result !== void 0 && result !== '') {
+              this.where[whereKey] = result
+            }
+
+            return
+          }
+
+          return
         }
 
-        return;
-      }
+        // ['whereKey' || null, 'queryKey', Object || Function]
+        if (arr.length == 3) {
+          const [whereKey, queryKey, objOrFunc] = arr
 
-      // ['whereKeyRequestKey', Object]
-      if (arr[1].constructor === Object) {
-        const [whereKeyRequestKey, obj] = arr;
+          if (!this.#getQueryValue(queryKey)) return
 
-        if (this.__getQueryData(whereKeyRequestKey)) {
-          this.where[whereKeyRequestKey] = obj;
-        }
+          if (objOrFunc.constructor === Object) {
+            if (whereKey === null) {
+              Object.assign(this.where, objOrFunc)
+            } else {
+              this.where[whereKey] = objOrFunc
+            }
 
-        return;
-      }
+            return
+          }
 
-      // ['whereKey', Function]
-      if (typeof arr[1] === 'function') {
-        const [whereKey, cb] = arr;
+          if (typeof objOrFunc === 'function') {
+            const result = objOrFunc()
 
-        const result = cb();
+            if (result === void 0 && result === '') return
 
-        if (result !== undefined && result !== '') {
-          this.where[whereKey] = result;
-        }
+            if (whereKey === null) {
+              Object.assign(this.where, result)
+            } else {
+              this.where[whereKey] = result
+            }
 
-        return;
-      }
-
-      return;
-    }
-
-    if (arr.length == 3) {
-      // ['whereKey' || null, 'requestKey', Object]
-      if (arr[2].constructor === Object) {
-        const [whereKey, requestKey, obj] = arr;
-
-        if (this.__getQueryData(requestKey)) {
-          if (whereKey !== null) {
-            this.where[whereKey] = obj;
-          } else {
-            this.where = { ...this.where, ...obj };
+            return
           }
         }
-
-        return;
       }
-
-      // ['whereKey' || null, 'requestKey', Function]
-      if (typeof arr[2] === 'function') {
-        const [whereKey, requestKey, cb] = arr;
-
-        const result = cb();
-
-        if (
-          this.__getQueryData(requestKey) &&
-          result !== undefined &&
-          result !== ''
-        ) {
-          if (whereKey !== null) {
-            this.where[whereKey] = result;
-          } else {
-            this.where = { ...this.where, ...result };
-          }
-        }
-
-        return;
+    },
+    {
+      Type: Object,
+      method(obj) {
+        Object.assign(this.where, obj)
       }
     }
-  }
+  ]
 
-  __object(obj) {
-    this.where = { ...this.where, ...obj };
+  #getQueryValue(key) {
+    const value = this.#query[key]
+
+    if (value === void 0) return
+    if (typeof value !== 'string') throw TypeError('Expected string')
+
+    return value
   }
 
   run() {
-    if (this.abstractions.length) {
-      for (const abstraction of this.abstractions) {
-        for (const { Type, method } of this.methods) {
-          if (abstraction.constructor === Type) {
-            this[method](abstraction);
+    if (!this.#abstractions.length) return
 
-            break;
-          }
-        }
+    for (const abstraction of this.#abstractions) {
+      for (const { Type, method } of this.#methods) {
+        if (abstraction.constructor !== Type) continue
+
+        method.call(this, abstraction)
+
+        break
       }
     }
   }
-};
+}

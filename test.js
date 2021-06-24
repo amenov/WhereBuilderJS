@@ -1,10 +1,11 @@
-const WhereBuilder = require('./WhereBuilder');
+const WhereBuilder = require('./WhereBuilder')
 
 const query = {
   firstname: 'Abdulsalam',
-  name: 'Abdulsalam',
-  just: 'simple',
-};
+  name: 'Abdul',
+  just: 'simple'
+}
+
 const abstractions = [
   'firstname',
   ['name', 'firstname'],
@@ -13,17 +14,17 @@ const abstractions = [
   ['object', 'name', { test: true }],
   [null, 'name', { test: true }],
   ['object_func', 'name', () => ({ object_func: true })],
-  [null, 'name', () => ({ null_func: true })],
-];
+  [null, 'name', () => ({ null_func: true })]
+]
 
-whereBuilder = new WhereBuilder(query, abstractions);
+whereBuilder = new WhereBuilder(query, abstractions)
 
 try {
-  whereBuilder.run();
+  whereBuilder.run()
 
-  const where = whereBuilder.where;
+  const where = whereBuilder.where
 
-  console.log(where);
+  console.log(where)
 } catch (err) {
-  console.log(err);
+  console.log(err)
 }

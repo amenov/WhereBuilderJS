@@ -1,8 +1,8 @@
 {
-  "name": "amenov.wherebuilderjs",
-  "version": "1.0.4",
+  "name": "amenov.wherebuilder",
+  "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "WhereBuilder.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -11,8 +11,8 @@
     "url": "git+https://github.com/amenov/WhereBuilderJS.git"
   },
   "keywords": [
-    "where",
-    "filter"
+    "sequelize",
+    "wherebuilder"
   ],
   "author": "Amenov Abdulsalam <amenov.abdulsalam@gmail.com>",
   "license": "MIT",
